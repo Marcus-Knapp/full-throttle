@@ -1638,7 +1638,7 @@ let sites       = [];  // site names
 
 // ─── PERSISTENCE ───────────────────────────────────────────────
 function loadConfig() {
-  // 1. Check URL parameter first — works on all devices, no localStorage needed
+  // 1. Check URL parameter first
   const urlParam = new URLSearchParams(window.location.search).get('gs');
   if (urlParam) {
     gsUrl = urlParam;
@@ -1646,13 +1646,13 @@ function loadConfig() {
     if (document.getElementById('gs-url')) document.getElementById('gs-url').value = gsUrl;
     return;
   }
-  // 2. Fall back to localStorage
+  // 2. Check localStorage — only override hardcoded URL if something is stored
   try {
-    gsUrl = localStorage.getItem('ft_gs_url') || '';
-  } catch(e) {
-    gsUrl = '';
-  }
-  if (gsUrl && document.getElementById('gs-url')) document.getElementById('gs-url').value = gsUrl;
+    const stored = localStorage.getItem('ft_gs_url');
+    if (stored) gsUrl = stored;
+  } catch(e) {}
+  // 3. gsUrl keeps its hardcoded value if neither above applied
+  if (document.getElementById('gs-url')) document.getElementById('gs-url').value = gsUrl;
 }
 
 function saveConfig() {
