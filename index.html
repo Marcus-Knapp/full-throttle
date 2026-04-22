@@ -1391,7 +1391,6 @@ header {
 <!-- COUNTDOWN -->
 <div class="countdown-banner">
   <div class="cd-label">🏁 Q2 Deadline</div>
-<div id="debug-panel" style="width:100%;background:#111;color:#0f0;font-family:monospace;font-size:11px;padding:10px;margin-top:8px;border-radius:6px;display:block;white-space:pre-wrap;word-break:break-all;">Initialising…</div>
   <div class="cd-units">
     <div class="cd-unit"><span class="cd-num" id="cd-d">--</span><span class="cd-lbl">Days</span></div>
     <div class="cd-unit"><span class="cd-num" id="cd-h">--</span><span class="cd-lbl">Hours</span></div>
@@ -1660,19 +1659,12 @@ function saveConfig() {
 }
 
 // ─── GOOGLE SHEETS API ─────────────────────────────────────────
-function dbg(msg) {
-  var el = document.getElementById('debug-panel');
-  if (el) el.textContent += '\n' + new Date().toLocaleTimeString('en-GB') + ' ' + msg;
-  console.log(msg);
-}
-
 async function callGS(action, payload) {
   if (!gsUrl) return null;
   try {
     if (action === 'get') {
       const r = await fetch(gsUrl + '?action=get&t=' + Date.now());
       const text = await r.text();
-      dbg('GET status:' + r.status + ' len:' + text.length);
       try { return JSON.parse(text); } catch(e) { throw new Error('Bad JSON: ' + text.slice(0,200)); }
     } else {
       // text/plain bypasses CORS preflight — required for Google Apps Script
@@ -1682,11 +1674,9 @@ async function callGS(action, payload) {
         body: JSON.stringify({ action, ...payload })
       });
       const text = await r.text();
-      dbg('POST status:' + r.status);
       try { return JSON.parse(text); } catch(e) { return { result: 'success' }; }
     }
   } catch(e) {
-    dbg('ERROR: ' + e.message);
     throw e;
   }
 }
@@ -2853,25 +2843,19 @@ document.getElementById('gs-script-display').textContent = GS_SCRIPT;
 // ─── INIT ──────────────────────────────────────────────────────
 async function init() {
   loadConfig();
-  dbg('gsUrl set: ' + (gsUrl ? gsUrl.slice(0,50)+'…' : 'EMPTY'));
   updateCountdown();
   setInterval(updateCountdown, 1000);
 
   if (gsUrl) {
     document.getElementById('lb-body').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div>Connecting to Google Sheets…</div>';
-    dbg('Starting fetchAll…');
     const result = await fetchAll();
-    dbg('fetchAll result: ' + result);
     if (result === true) {
-      dbg('Success — stock:' + stockData.length + ' sales:' + salesData.length);
       refreshAll();
     } else {
       const errMsg = result || 'Could not connect';
-      dbg('FAILED: ' + errMsg);
       document.getElementById('lb-body').innerHTML = `<div class="empty-msg">⚠️ Connection error: <strong>${errMsg}</strong></div>`;
     }
   } else {
-    dbg('No gsUrl — showing empty state');
     refreshAll();
   }
 
