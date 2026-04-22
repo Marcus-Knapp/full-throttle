@@ -1666,55 +1666,27 @@ function dbg(msg) {
   console.log(msg);
 }
 
-// JSONP fetch — bypasses CORS entirely, works on all mobile browsers
-function jsonpFetch(url) {
-  return new Promise(function(resolve, reject) {
-    var cbName = 'ft_cb_' + Date.now();
-    var script = document.createElement('script');
-    var timeout = setTimeout(function() {
-      cleanup();
-      reject(new Error('Request timed out'));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(data) {
-      cleanup();
-      dbg('JSONP response received, keys: ' + Object.keys(data).join(', '));
-      resolve(data);
-    };
-
-    script.src = url + '&callback=' + cbName;
-    dbg('JSONP request: ' + script.src.slice(0,80) + '…');
-    script.onerror = function() {
-      cleanup();
-      reject(new Error('Script load failed'));
-    };
-    document.head.appendChild(script);
-  });
-}
-
 async function callGS(action, payload) {
   if (!gsUrl) return null;
   try {
     if (action === 'get') {
-      // Use JSONP for GET — works on all devices including iOS Safari
-      return await jsonpFetch(gsUrl + '?action=get&t=' + Date.now());
+      const r = await fetch(gsUrl + '?action=get&t=' + Date.now());
+      const text = await r.text();
+      dbg('GET status:' + r.status + ' len:' + text.length);
+      try { return JSON.parse(text); } catch(e) { throw new Error('Bad JSON: ' + text.slice(0,200)); }
     } else {
-      // POST for writes — use no-cors mode so mobile doesn't block it
+      // text/plain bypasses CORS preflight — required for Google Apps Script
       const r = await fetch(gsUrl, {
         method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, ...payload })
       });
       const text = await r.text();
+      dbg('POST status:' + r.status);
       try { return JSON.parse(text); } catch(e) { return { result: 'success' }; }
     }
   } catch(e) {
-    console.warn('GS call failed:', e);
+    dbg('ERROR: ' + e.message);
     throw e;
   }
 }
