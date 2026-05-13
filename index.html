@@ -1998,8 +1998,17 @@ function getSPStats() {
     const car = stockData.find(c => (c.VehicleID||"").trim().toUpperCase() === (s.VehicleID||"").trim().toUpperCase());
     const isEV = car && isEVModel(car && car.Model);
     if (isEV) spMap[name].ev++;
-    const age = Date.now() - new Date(s.Timestamp).getTime();
-    if (age < 7*86400000) spMap[name].week++;
+    // Current Mon–Sun calendar week
+    const saleDay = new Date(s.Timestamp);
+    const dow = saleDay.getDay();
+    const diffToMon = (dow === 0) ? -6 : 1 - dow;
+    const weekStart = new Date(saleDay); weekStart.setHours(0,0,0,0); weekStart.setDate(saleDay.getDate() + diffToMon);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
+    const nowD = new Date();
+    const nowDow = nowD.getDay();
+    const nowDiffToMon = (nowDow === 0) ? -6 : 1 - nowDow;
+    const thisWeekStart = new Date(nowD); thisWeekStart.setHours(0,0,0,0); thisWeekStart.setDate(nowD.getDate() + nowDiffToMon);
+    if (weekStart.getTime() === thisWeekStart.getTime()) spMap[name].week++;
     spMap[name].sales.push({
       model:     car ? cleanModel(car.Model) : (s.Model||'Unknown'),
       spec:      car ? car.Spec : '',
