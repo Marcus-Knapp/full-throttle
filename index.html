@@ -1632,7 +1632,7 @@ header {
 <!-- ═══════════════════════════════ SCRIPT ═══════════════════════════════ -->
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────
-const EV_MODELS = ['IONIQ 5','IONIQ 5 N','IONIQ 6','IONIQ 9','Inster (AX EV)','Kona EV (SX2)','Kona EV','Kona HEV','Kona HEV (SX2)','Santa Fe HEV (MX5)','Santa Fe PHEV (MX5)','Tucson HEV','Tucson PHEV'];
+const EV_MODELS = ['IONIQ 5','IONIQ 5 N','IONIQ 6','IONIQ 9','Inster','Inster (AX EV)','Kona EV','Kona EV (SX2)','Kona HEV','Kona HEV (SX2)','Santa Fe HEV','Santa Fe HEV (MX5)','Santa Fe PHEV','Santa Fe PHEV (MX5)','Tucson HEV','Tucson PHEV'];
 
 // Robust EV check — matches on list OR on model name containing EV/HEV/PHEV/IONIQ
 function isEVModel(modelName) {
@@ -2010,7 +2010,16 @@ function getSPStats() {
       vehicleId: s.VehicleID||''
     });
   });
-  return Object.values(spMap).sort((a,b)=>b.count-a.count);
+  return Object.values(spMap).sort((a,b) => {
+    // 1. Total sales
+    if (b.count !== a.count) return b.count - a.count;
+    // 2. EV count
+    if (b.ev !== a.ev) return b.ev - a.ev;
+    // 3. Earliest last sale timestamp (first to reach their total wins)
+    const aLast = a.sales.length ? Math.max(...a.sales.map(s => new Date(s.timestamp))) : Infinity;
+    const bLast = b.sales.length ? Math.max(...b.sales.map(s => new Date(s.timestamp))) : Infinity;
+    return aLast - bLast;
+  });
 }
 
 // ─── RENDER ────────────────────────────────────────────────────
@@ -2276,7 +2285,11 @@ function renderSellers() {
     return;
   }
 
-  document.getElementById('sellers-body').innerHTML = sps.map((sp, i) => {
+  document.getElementById('sellers-body').innerHTML = `
+    <div class="sc-rules" style="margin-bottom:16px;border-radius:var(--radius);">
+      📋 <strong>How rankings work:</strong> Sorted by most sales → most EV/Hybrid sold → first to reach their total (by timestamp).
+      A sale counts towards the <strong>salesperson who made it</strong> regardless of which site the car came from.
+    </div>` + sps.map((sp, i) => {
     const evPct = sp.count ? Math.round(sp.ev/sp.count*100) : 0;
     const myBonuses = allBonuses[sp.name] || [];
 
